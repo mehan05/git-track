@@ -53,10 +53,21 @@ export class WorklogService {
       let existingValue = '';
 
       for (let i = 0; i < rows.length; i++) {
-        if (rows[i][0] === today) {
-          rowIndex = i + 1; // 1-indexed for Sheets
-          existingValue = rows[i][colIndex] || '';
-          break;
+        const rowDateStr = rows[i][0];
+        if (!rowDateStr) continue;
+
+        try {
+          const rowDate = new Date(rowDateStr);
+          
+          if (rowDate.getFullYear() === commitDate.getFullYear() &&
+              rowDate.getMonth() === commitDate.getMonth() &&
+              rowDate.getDate() === commitDate.getDate()) {
+            rowIndex = i + 1; // 1-indexed for Sheets
+            existingValue = rows[i][colIndex] || '';
+            break;
+          }
+        } catch (e) {
+          continue;
         }
       }
 
