@@ -147,7 +147,7 @@ export class SheetsClient {
       (s) => s.properties?.title === env.GOOGLE_SHEET_NAME
     );
 
-    if (!sheet || sheet.properties?.sheetId === undefined) {
+    if (!sheet || sheet.properties?.sheetId == null) {
       throw new Error(`Sheet "${env.GOOGLE_SHEET_NAME}" not found`);
     }
 

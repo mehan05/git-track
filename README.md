@@ -12,6 +12,7 @@ GitTrack is a lightweight, background productivity daemon designed for developer
 - **💾 Offline-First Architecture**: Stores commits locally in an SQLite database (`better-sqlite3`) if the internet is unavailable, with automatic retry logic.
 - **🚫 Deduplication**: Ensures no commit is ever logged twice via unique hash tracking.
 - **📝 Structured Logging**: Built with `pino` for professional, structured logs.
+- **🤖 AI Daily Summary**: Automatically summarizes your daily commits using Google Gemini and emails a report to your manager.
 
 ---
 
@@ -72,6 +73,11 @@ pnpm build
 | `GOOGLE_SHEET_NAME` | The name of the tab in your Google Sheet. | `Sheet1` |
 | `RETRY_INTERVAL_MS` | Delay between retrying failed syncs. | `60000` (1 min) |
 | `MAX_RETRY_COUNT` | Max attempts to sync a single commit. | `5` |
+| `GEMINI_API_KEY` | Your Google Gemini API Key. | `AIza...` |
+| `MANAGER_EMAIL` | Recipient of the daily report. | `manager@example.com` |
+| `SMTP_HOST` | SMTP server host. | `smtp.gmail.com` |
+| `SMTP_USER` | SMTP username (your email). | `your@email.com` |
+| `SMTP_PASS` | SMTP password (App Password). | `xxxx xxxx xxxx xxxx` |
 
 ---
 
@@ -101,6 +107,29 @@ pm2 startup
 3. **Trigger**: When a commit is made, the watcher triggers a fetch of the latest commit metadata (author, message, timestamp, hash).
 4. **Queue**: If the author matches `GITTRACK_AUTHOR_EMAIL`, the commit is saved to the local SQLite database.
 5. **Sync**: GitTrack attempts to append the commit data to the specified Google Sheet. If successful, it's marked as processed. If it fails, it remains in the `pending_queue` for retry.
+6. **Summarize**: Every day at the scheduled time (default 6 PM), the AI summarizes all tracked commits and sends an email report.
+
+---
+
+## 🤖 AI Daily Summary Management
+
+You can manage the reporting schedule and disabled days using the provided utility script.
+
+### Change Report Time
+Uses standard [Cron Syntax](https://crontab.guru/).
+```bash
+# Example: Set to 7:30 PM
+npx ts-node src/scripts/update-settings.ts --time "30 19 * * *"
+```
+
+### Disable Particular Days
+```bash
+# Example: Disable Saturday and Sunday
+npx ts-node src/scripts/update-settings.ts --disable "Saturday,Sunday"
+```
+
+> [!NOTE]
+> Restart the daemon after changing these settings for them to take effect.
 
 ---
 

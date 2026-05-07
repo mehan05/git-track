@@ -4,9 +4,18 @@ import { RepositoryScanner } from './discovery/scanner.js';
 import { RepoWatcher } from './watcher/monitor.js';
 import { WorklogService } from './services/worklog.js';
 import { SyncQueue } from './queue/sync-queue.js';
+import { CronService } from './services/cron.js';
 
 async function bootstrap() {
   logger.info('🚀 GitTrack Daemon starting...');
+  
+  // Initialize Cron Job for daily summaries
+  try {
+    await CronService.init();
+  } catch (err) {
+    logger.error(`Failed to initialize Cron service: ${(err as Error).message}`);
+  }
+
   logger.info(`Author email: ${env.GITTRACK_AUTHOR_EMAIL}`);
   logger.info(`Watching directories: ${env.WATCH_DIRECTORIES.join(', ')}`);
 

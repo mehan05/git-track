@@ -20,6 +20,15 @@ db.exec(`
     last_error TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS manager_settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    cron_time TEXT DEFAULT '0 18 * * *',
+    disabled_days TEXT DEFAULT '[]',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  INSERT OR IGNORE INTO manager_settings (id, cron_time, disabled_days) VALUES (1, '0 18 * * *', '[]');
 `);
 
 logger.info(`Database initialized at ${dbPath}`);

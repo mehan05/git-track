@@ -15,6 +15,16 @@ const envSchema = z.object({
   GOOGLE_SHEET_NAME: z.string().default('Sheet1'),
   RETRY_INTERVAL_MS: z.coerce.number().default(60000), // 1 minute
   MAX_RETRY_COUNT: z.coerce.number().default(5),
+  
+  // AI Integration
+  GEMINI_API_KEY: z.string().min(1),
+  
+  // Email Configuration
+  MANAGER_EMAIL: z.string().email(),
+  SMTP_HOST: z.string().min(1),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().min(1),
+  SMTP_PASS: z.string().min(1),
 });
 
 const _env = envSchema.safeParse(process.env);
