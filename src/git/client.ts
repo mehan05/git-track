@@ -34,4 +34,22 @@ export class GitClient {
       return null;
     }
   }
+
+  public async getCommitsForDay(date: Date): Promise<string[]> {
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const log = await this.git.log({
+        '--since': startOfDay.toISOString(),
+        '--until': endOfDay.toISOString(),
+      });
+
+      return log.all.map(c => c.message);
+    } catch (err) {
+      return [];
+    }
+  }
 }
