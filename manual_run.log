@@ -1,0 +1,9 @@
+◇ injected env (9) from .env // tip: ⌘ override existing { override: true }
+[2026-05-06 13:44:20.763 +0530] [32mINFO[39m: [36mDatabase initialized at /home/mehan/Step_7/gittrack/gittrack.db[39m
+[2026-05-06 13:44:21.878 +0530] [32mINFO[39m: [36m🚀 GitTrack Daemon starting...[39m
+[2026-05-06 13:44:21.878 +0530] [32mINFO[39m: [36mAuthor email: mehanmehan6@gmail.com[39m
+[2026-05-06 13:44:21.878 +0530] [32mINFO[39m: [36mWatching directories: /home/mehan/Step_7/calibraint/dosales-landing[39m
+[2026-05-06 13:44:21.878 +0530] [32mINFO[39m: [36mDiscovered 1 repositories[39m
+[2026-05-06 13:44:21.880 +0530] [32mINFO[39m: [36mStarted watching 1 repositories[39m
+[2026-05-06 13:44:21.881 +0530] [32mINFO[39m: [36m✅ GitTrack is running in background[39m
+[2026-05-06 13:44:25.529 +0530] [32mINFO[39m: [36mShutting down...[39m

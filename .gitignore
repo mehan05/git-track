@@ -1,0 +1,7 @@
+.env
+gittrack.db
+logs/
+dist/
+node_modules/
+yarn.lock
+ws-chat-490409-2681696b8cf6.json
