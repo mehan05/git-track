@@ -86,7 +86,8 @@ export class WorklogService {
         }
       }
 
-      const newValue = existingValue ? `${existingValue}\n${commit.message}` : commit.message;
+      const formattedMessage = `[${commit.projectName}] ${commit.message}`;
+      const newValue = existingValue ? `${existingValue}\n${formattedMessage}` : formattedMessage;
 
       if (rowIndex !== -1) {
         // Update existing row

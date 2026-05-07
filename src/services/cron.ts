@@ -5,6 +5,8 @@ import { logger } from '../logger/index.js';
 import { GitClient } from '../git/client.js';
 import { summarizeCommits } from './ai.js';
 import { sendDailySummary } from './email.js';
+import { RepositoryScanner } from '../discovery/scanner.js';
+import path from 'path';
 
 let activeJob: cron.ScheduledTask | null = null;
 
@@ -41,11 +43,13 @@ export class CronService {
 
     logger.info('Starting daily commit summarization...');
 
+    const repos = RepositoryScanner.scan(env.WATCH_DIRECTORIES);
     const allCommits: string[] = [];
-    for (const repoPath of env.WATCH_DIRECTORIES) {
+    for (const repoPath of repos) {
       const gitClient = new GitClient(repoPath);
+      const projectName = path.basename(repoPath);
       const commits = await gitClient.getCommitsForDay(today);
-      allCommits.push(...commits);
+      allCommits.push(...commits.map(c => `[${projectName}] ${c}`));
     }
 
     if (allCommits.length === 0) {
