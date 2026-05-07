@@ -52,10 +52,37 @@ export class WorklogService {
       let rowIndex = -1;
       let existingValue = '';
 
+      const targetYear = commitDate.getFullYear();
+      const targetMonth = commitDate.getMonth();
+      const targetDay = commitDate.getDate();
+
       for (let i = 0; i < rows.length; i++) {
-        if (rows[i][0] === today) {
+        const rowDateStr = rows[i][0]?.toString().trim();
+        if (!rowDateStr) continue;
+
+        let rowDate: Date | null = null;
+
+        // Robust Parsing: Handle YYYY-MM-DD and MM/DD/YYYY consistently in local time
+        // (Google Sheets may reformat the date we write)
+        const isoMatch = rowDateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        const usMatch  = rowDateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+        if (isoMatch) {
+          rowDate = new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
+        } else if (usMatch) {
+          rowDate = new Date(parseInt(usMatch[3]), parseInt(usMatch[1]) - 1, parseInt(usMatch[2]));
+        } else {
+          rowDate = new Date(rowDateStr);
+        }
+
+        if (!rowDate || isNaN(rowDate.getTime())) continue;
+
+        if (rowDate.getFullYear() === targetYear &&
+            rowDate.getMonth()    === targetMonth &&
+            rowDate.getDate()     === targetDay) {
           rowIndex = i + 1; // 1-indexed for Sheets
           existingValue = rows[i][colIndex] || '';
+          logger.debug(`Found existing row for date ${today} at sheet row ${rowIndex}`);
           break;
         }
       }
@@ -64,9 +91,11 @@ export class WorklogService {
 
       if (rowIndex !== -1) {
         // Update existing row
+        logger.info(`Updating existing sheet row ${rowIndex} for ${today}`);
         await SheetsClient.updateCell(rowIndex, colIndex, newValue);
       } else {
         // Create new row
+        logger.info(`No existing row found for ${today} — creating new row`);
         const newRow = new Array(11).fill('');
         newRow[0] = today;
         newRow[colIndex] = commit.message;

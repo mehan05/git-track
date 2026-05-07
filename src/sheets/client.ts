@@ -151,6 +151,6 @@ export class SheetsClient {
       throw new Error(`Sheet "${env.GOOGLE_SHEET_NAME}" not found`);
     }
 
-    return sheet.properties.sheetId;
+    return sheet.properties.sheetId as number;
   }
 }
