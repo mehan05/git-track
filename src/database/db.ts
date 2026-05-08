@@ -25,6 +25,7 @@ db.exec(`
     id INTEGER PRIMARY KEY CHECK (id = 1),
     cron_time TEXT DEFAULT '0 18 * * *',
     disabled_days TEXT DEFAULT '[]',
+    last_report_at DATETIME,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 

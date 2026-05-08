@@ -15,6 +15,34 @@ export class CronService {
     const settings = SettingsService.getSettings();
     this.scheduleJob(settings.cron_time);
     logger.info(`Cron service initialized. Schedule: ${settings.cron_time}`);
+    
+    // Check for missed reports on startup
+    await this.checkMissedReport();
+  }
+
+  private static async checkMissedReport(): Promise<void> {
+    const settings = SettingsService.getSettings();
+    const parts = settings.cron_time.split(' ');
+    if (parts.length < 2) return;
+
+    const scheduledMinute = parseInt(parts[0]);
+    const scheduledHour = parseInt(parts[1]);
+
+    const now = new Date();
+    const scheduledToday = new Date(now);
+    scheduledToday.setHours(scheduledHour, scheduledMinute, 0, 0);
+
+    const lastReport = settings.last_report_at ? new Date(settings.last_report_at) : new Date(0);
+    
+    // If we are past the scheduled time today AND the last report was before today's scheduled time
+    if (now >= scheduledToday && lastReport < scheduledToday) {
+      logger.info('Detected missed daily report. Running now...');
+      try {
+        await this.runDailyReport();
+      } catch (error) {
+        logger.error('Failed to run missed daily report:', error as any);
+      }
+    }
   }
 
   public static scheduleJob(cronTime: string): void {
@@ -54,11 +82,16 @@ export class CronService {
 
     if (allCommits.length === 0) {
       logger.info('No commits found for today. Skipping summary email.');
+      // Still update the timestamp so we don't keep trying today if it's empty
+      SettingsService.updateSettings(undefined, undefined, today.toISOString());
       return;
     }
 
     const summary = await summarizeCommits(allCommits);
     await sendDailySummary(summary);
+    
+    // Update last report timestamp
+    SettingsService.updateSettings(undefined, undefined, today.toISOString());
     logger.info('Daily report completed successfully.');
   }
 
