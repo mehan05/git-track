@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { GitClient } from '../git/client.js';
 import { db } from '../database/db.js';
 import { env } from '../config/env.js';
@@ -17,21 +19,38 @@ export class WorklogService {
     }
 
     // 1. Author Filter
-    if (commit.authorEmail !== env.GITTRACK_AUTHOR_EMAIL) {
+    if (commit.authorEmail.toLowerCase() !== env.GITTRACK_AUTHOR_EMAIL.toLowerCase()) {
       logger.debug(`Ignoring commit ${commit.hash} from other author: ${commit.authorEmail}`);
       return;
     }
 
-    // 2. Duplicate Check & Lock
+    // 2. Exclusion Rules (Branches, .gittrackignore)
+    if (this.shouldIgnore(commit)) {
+      return;
+    }
+
+    // 3. Duplicate Check & Store Metadata
     try {
-      db.prepare('INSERT INTO processed_commits (hash) VALUES (?)').run(commit.hash);
+      db.prepare(`
+        INSERT INTO processed_commits 
+        (hash, author_email, author_name, commit_date, project_name, message, branch) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        commit.hash,
+        commit.authorEmail,
+        commit.authorName,
+        commit.date,
+        commit.projectName,
+        commit.message,
+        commit.branch
+      );
     } catch (err) {
       // If unique constraint fails, it's already being processed or done
       logger.debug(`Commit ${commit.hash} already being processed or done. Skipping.`);
       return;
     }
 
-    // 3. Process Sync
+    // 4. Process Sync to Sheets
     await this.syncCommit(commit);
   }
 
@@ -107,4 +126,43 @@ export class WorklogService {
     }
   }
 
+  private static shouldIgnore(commit: CommitMetadata): boolean {
+    // 1. Global Branch Exclusion
+    const isExcludedBranch = env.EXCLUDE_BRANCHES.some(pattern => {
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+      return regex.test(commit.branch);
+    });
+
+    if (isExcludedBranch) {
+      logger.debug(`Ignoring commit ${commit.hash} on excluded branch: ${commit.branch}`);
+      return true;
+    }
+
+    // 2. Global Repo Exclusion
+    if (env.EXCLUDE_REPOS.includes(path.resolve(commit.repoPath))) {
+      logger.debug(`Ignoring commit ${commit.hash} in excluded repo: ${commit.repoPath}`);
+      return true;
+    }
+
+    // 3. .gittrackignore in Repo Root
+    const ignorePath = path.join(commit.repoPath, '.gittrackignore');
+    if (fs.existsSync(ignorePath)) {
+      try {
+        const ignoreContent = fs.readFileSync(ignorePath, 'utf-8');
+        const ignoreLines = ignoreContent.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+        
+        for (const line of ignoreLines) {
+          const regex = new RegExp('^' + line.replace(/\*/g, '.*') + '$');
+          if (regex.test(commit.branch) || regex.test(commit.projectName)) {
+            logger.debug(`Ignoring commit ${commit.hash} due to .gittrackignore rule: ${line}`);
+            return true;
+          }
+        }
+      } catch (err) {
+        logger.error(`Error reading .gittrackignore in ${commit.repoPath}: ${(err as Error).message}`);
+      }
+    }
+
+    return false;
+  }
 }

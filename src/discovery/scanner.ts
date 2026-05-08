@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../logger/index.js';
+import { env } from '../config/env.js';
 
 export class RepositoryScanner {
   public static scan(rootDirs: string[]): string[] {
@@ -19,6 +20,12 @@ export class RepositoryScanner {
   }
 
   private static findGitRepos(dir: string, repos: string[]): void {
+    const absDir = path.resolve(dir);
+    if (env.EXCLUDE_REPOS.includes(absDir)) {
+      logger.debug(`Skipping excluded repository: ${absDir}`);
+      return;
+    }
+
     try {
       const files = fs.readdirSync(dir);
       

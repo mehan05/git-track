@@ -9,20 +9,37 @@ const ai = new GoogleGenAI({
 const model = 'gemini-flash-latest';
 const config = {};
 
-export async function summarizeCommits(commits: string[]): Promise<string> {
+export async function summarizeCommits(commits: any[], sessions: any[]): Promise<string> {
   if (commits.length === 0) {
     return 'No commits were made today.';
   }
 
-  const prompt = `
+  let prompt = `
     You are an AI assistant helping a developer report their daily work to their manager.
-    Below is a list of git commit messages for today. 
-    Please summarize these commits into a professional, concise, and easy-to-read bulleted list for a daily report.
-    Ensure the tone is professional and focuses on the value delivered.
+    Below is a list of git commit messages for today, along with "Focus Sessions" (periods of continuous deep work).
 
-    Commit Messages:
-    ${commits.map(c => `- ${c}`).join('\n')}
+    Please summarize this into a professional, concise, and easy-to-read daily report.
+    - DO NOT use markdown characters like **, #, or / in your response.
+    - Use plain text only.
+    - Group the report into sections: "Focus Sessions", "Accomplishments", and "Value Delivered".
+    - Use simple dashes (-) for bullet points.
+    - Highlight the "Focus Sessions" to show deep work.
+    - Summarize the commits into clear bullet points.
+    - Focus on value delivered.
+
+    Focus Sessions: ${sessions.length} sessions detected.
   `;
+
+  for (const session of sessions) {
+    const start = new Date(session.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const end = new Date(session.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    prompt += `\n- Session: ${start} to ${end} (${session.count} commits)`;
+  }
+
+  prompt += `\n\nCommits:`;
+  for (const commit of commits) {
+    prompt += `\n- [${commit.project_name}] ${commit.message}`;
+  }
 
   try {
     const response = await ai.models.generateContent({
@@ -39,6 +56,6 @@ export async function summarizeCommits(commits: string[]): Promise<string> {
     return response.text || 'Failed to generate summary.';
   } catch (error: any) {
     logger.error(`Error generating AI summary: ${error.message || error}`);
-    return `Summary of today's work:\n${commits.map(c => `- ${c}`).join('\n')}`;
+    return `Summary of today's work:\n${commits.map(c => `- [${c.project_name}] ${c.message}`).join('\n')}`;
   }
 }

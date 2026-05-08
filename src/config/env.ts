@@ -10,6 +10,11 @@ const envSchema = z.object({
   GOOGLE_PRIVATE_KEY: z.string().min(1).transform((val) => val.replace(/\\n/g, '\n')),
   GITTRACK_AUTHOR_EMAIL: z.string().email(),
   WATCH_DIRECTORIES: z.string().transform((val) => val.split(',').map((p) => path.resolve(p.trim()))),
+  
+  // Exclusion Rules
+  EXCLUDE_BRANCHES: z.string().default('').transform((val) => val ? val.split(',').map((b) => b.trim()) : []),
+  EXCLUDE_REPOS: z.string().default('').transform((val) => val ? val.split(',').map((p) => path.resolve(p.trim())) : []),
+
   DATABASE_PATH: z.string().default('gittrack.db'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   GOOGLE_SHEET_NAME: z.string().default('Sheet1'),

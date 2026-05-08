@@ -1,0 +1,17 @@
+{
+  "name": "@gittrack/cli",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "gittrack": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "cli-table3": "^0.6.5",
+    "commander": "^12.1.0"
+  }
+}

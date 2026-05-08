@@ -2,10 +2,9 @@ import cron from 'node-cron';
 import { SettingsService } from './settings.js';
 import { env } from '../config/env.js';
 import { logger } from '../logger/index.js';
-import { GitClient } from '../git/client.js';
+import { db } from '../database/db.js';
 import { summarizeCommits } from './ai.js';
-import { sendDailySummary } from './email.js';
-import { RepositoryScanner } from '../discovery/scanner.js';
+import { sendDailySummary, sendNoWorkEmail } from './email.js';
 import path from 'path';
 
 let activeJob: cron.ScheduledTask | null = null;
@@ -71,24 +70,45 @@ export class CronService {
 
     logger.info('Starting daily commit summarization...');
 
-    const repos = RepositoryScanner.scan(env.WATCH_DIRECTORIES);
-    const allCommits: string[] = [];
-    for (const repoPath of repos) {
-      const gitClient = new GitClient(repoPath);
-      const projectName = path.basename(repoPath);
-      const commits = await gitClient.getCommitsForDay(today);
-      allCommits.push(...commits.map(c => `[${projectName}] ${c}`));
-    }
+    const todayStr = today.toISOString().split('T')[0];
+    const commits = db.prepare(`
+      SELECT * FROM processed_commits 
+      WHERE DATE(commit_date) = ?
+      ORDER BY author_email, commit_date ASC
+    `).all(todayStr) as any[];
 
-    if (allCommits.length === 0) {
-      logger.info('No commits found for today. Skipping summary email.');
-      // Still update the timestamp so we don't keep trying today if it's empty
+    if (commits.length === 0) {
+      logger.info('No commits found for today. Sending funny "no work" email.');
+      await sendNoWorkEmail(today);
       SettingsService.updateSettings(undefined, undefined, today.toISOString());
       return;
     }
 
-    const summary = await summarizeCommits(allCommits);
-    await sendDailySummary(summary);
+    // Calculate Deep Work sessions for the single author
+    const sessions: { start: string, end: string, count: number }[] = [];
+
+    for (const commit of commits) {
+      // Deep Work Session Logic: gap < 2 hours
+      const lastSession = sessions[sessions.length - 1];
+      const commitTime = new Date(commit.commit_date).getTime();
+      
+      if (!lastSession) {
+        sessions.push({ start: commit.commit_date, end: commit.commit_date, count: 1 });
+      } else {
+        const lastTime = new Date(lastSession.end).getTime();
+        const diffHours = (commitTime - lastTime) / (1000 * 60 * 60);
+        
+        if (diffHours < 2) {
+          lastSession.end = commit.commit_date;
+          lastSession.count++;
+        } else {
+          sessions.push({ start: commit.commit_date, end: commit.commit_date, count: 1 });
+        }
+      }
+    }
+
+    const summary = await summarizeCommits(commits, sessions);
+    await sendDailySummary(summary, today);
     
     // Update last report timestamp
     SettingsService.updateSettings(undefined, undefined, today.toISOString());

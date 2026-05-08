@@ -16,7 +16,7 @@ async function bootstrap() {
     logger.error(`Failed to initialize Cron service: ${(err as Error).message}`);
   }
 
-  logger.info(`Author email: ${env.GITTRACK_AUTHOR_EMAIL}`);
+  logger.info(`Tracking author: ${env.GITTRACK_AUTHOR_EMAIL}`);
   logger.info(`Watching directories: ${env.WATCH_DIRECTORIES.join(', ')}`);
 
   // 1. Initial Scan
